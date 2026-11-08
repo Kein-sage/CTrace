@@ -1,3 +1,6 @@
+import io
+import runpy
+from unittest.mock import patch
 import tempfile
 import json
 import subprocess
@@ -225,3 +228,47 @@ class DiagnoseTests(unittest.TestCase):
             self.assertEqual(report["file"], str(missing_file.resolve()))
             self.assertEqual(report["diagnostics"], [])
             self.assertEqual(report["error"]["code"], "FILE_NOT_FOUND")
+
+
+
+class CompilerFailureTests(unittest.TestCase):
+    def check_compiler_failure(self, failure, expected_code):
+        script = ROOT / "backend" / "diagnose.py"
+        source = ROOT / "examples" / "correct.c"
+
+        with (
+            patch("sys.argv", [str(script), str(source)]),
+            patch("subprocess.run", side_effect=failure) as compiler,
+            patch("sys.stdout", new_callable=io.StringIO) as output,
+            self.assertRaises(SystemExit) as raised,
+        ):
+            runpy.run_path(str(script), run_name="__main__")
+
+        compiler.assert_called_once()
+        self.assertEqual(raised.exception.code, 2)
+
+        report = json.loads(output.getvalue())
+        self.assertFalse(report["success"])
+        self.assertEqual(report["file"], str(source.resolve()))
+        self.assertEqual(report["diagnostics"], [])
+        self.assertEqual(report["compiler_output"], "")
+        self.assertEqual(report["error"]["code"], expected_code)
+        self.assertTrue(report["error"]["message"])
+
+    def test_compiler_not_found(self):
+        self.check_compiler_failure(
+            FileNotFoundError("模拟找不到编译器"),
+            "COMPILER_NOT_FOUND",
+        )
+
+    def test_compiler_timeout(self):
+        self.check_compiler_failure(
+            subprocess.TimeoutExpired(cmd=["clang"], timeout=5),
+            "COMPILER_TIMEOUT",
+        )
+
+    def test_compiler_start_failed(self):
+        self.check_compiler_failure(
+            PermissionError("模拟没有执行权限"),
+            "COMPILER_START_FAILED",
+        )
