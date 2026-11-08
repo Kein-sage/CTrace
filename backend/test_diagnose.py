@@ -229,6 +229,40 @@ class DiagnoseTests(unittest.TestCase):
             self.assertEqual(report["diagnostics"], [])
             self.assertEqual(report["error"]["code"], "FILE_NOT_FOUND")
 
+    def check_source_size(self, size):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "size_check.c"
+            code = b"int main(void) { return 0; }\n"
+            source.write_bytes(code + b" " * (size - len(code)))
+
+            return subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "backend" / "diagnose.py"),
+                    str(source),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+    def test_source_at_size_limit(self):
+        result = self.check_source_size(65536)
+        self.assertEqual(result.returncode, 0)
+
+        report = json.loads(result.stdout)
+        self.assertTrue(report["success"])
+        self.assertIsNone(report["error"])
+
+    def test_source_over_size_limit(self):
+        result = self.check_source_size(65537)
+        self.assertEqual(result.returncode, 2)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+        self.assertEqual(report["diagnostics"], [])
+        self.assertEqual(report["error"]["code"], "SOURCE_TOO_LARGE")
+
 
 
 class CompilerFailureTests(unittest.TestCase):

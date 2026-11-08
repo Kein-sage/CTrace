@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+MAX_SOURCE_BYTES = 64 * 1024
+
 EXPLANATIONS = {
     "expected ';' after return statement":
         "return 语句末尾缺少分号，请在 return 表达式后添加英文分号 ;。",
@@ -79,6 +81,22 @@ if not source.is_file():
     exit_with_error(
         "FILE_NOT_FOUND",
         "输入文件不存在或不是普通文件。",
+        str(source),
+    )
+
+try:
+    source_size = source.stat().st_size
+except OSError:
+    exit_with_error(
+        "FILE_ACCESS_FAILED",
+        "无法读取输入文件信息，请检查路径和权限。",
+        str(source),
+    )
+
+if source_size > MAX_SOURCE_BYTES:
+    exit_with_error(
+        "SOURCE_TOO_LARGE",
+        f"输入文件过大，最大允许{MAX_SOURCE_BYTES}字节。",
         str(source),
     )
 
