@@ -4,7 +4,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+from compiler_runner import CompilerOutputLimitExceeded, run_compiler
+
 MAX_SOURCE_BYTES = 64 * 1024
+MAX_COMPILER_OUTPUT_BYTES = 1024 * 1024
 
 EXPLANATIONS = {
     "expected ';' after return statement":
@@ -101,11 +104,16 @@ if source_size > MAX_SOURCE_BYTES:
     )
 
 try:
-    result = subprocess.run(
+    result = run_compiler(
         ["clang", "-fsyntax-only", "-fno-color-diagnostics", str(source)],
-        capture_output=True,
-        text=True,
         timeout=5,
+        max_output_bytes=MAX_COMPILER_OUTPUT_BYTES,
+    )
+except CompilerOutputLimitExceeded:
+    exit_with_error(
+        "COMPILER_OUTPUT_TOO_LARGE",
+        f"编译器输出过大，最大允许{MAX_COMPILER_OUTPUT_BYTES}字节。",
+        str(source),
     )
 except FileNotFoundError:
     exit_with_error(
@@ -122,7 +130,7 @@ except subprocess.TimeoutExpired:
 except OSError:
     exit_with_error(
         "COMPILER_START_FAILED",
-        "无法启动 clang，请检查程序路径和执行权限。",
+        "编译器运行异常，请检查程序路径、执行权限和系统资源。",
         str(source),
     )
 

@@ -272,7 +272,7 @@ class CompilerFailureTests(unittest.TestCase):
 
         with (
             patch("sys.argv", [str(script), str(source)]),
-            patch("subprocess.run", side_effect=failure) as compiler,
+            patch("compiler_runner.run_compiler", side_effect=failure) as compiler,
             patch("sys.stdout", new_callable=io.StringIO) as output,
             self.assertRaises(SystemExit) as raised,
         ):
