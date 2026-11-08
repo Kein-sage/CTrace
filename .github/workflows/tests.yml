@@ -1,0 +1,41 @@
+name: CTrace Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install Clang 18
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-18
+          echo "/usr/lib/llvm-18/bin" >> "$GITHUB_PATH"
+
+      - name: Show tool versions
+        run: |
+          python --version
+          clang --version
+
+      - name: Run tests
+        run: python -m unittest discover -s backend -p 'test_*.py' -v
