@@ -140,3 +140,43 @@ class DiagnoseTests(unittest.TestCase):
             error["explanation"],
             "此处需要一个有效表达式，请检查附近代码，并优先处理前面的诊断。",
         )
+
+    def test_wrong_argument_count(self):
+        result = check_example("wrong_argument_count.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+
+        errors = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "error"
+        ]
+        notes = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "note"
+        ]
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(notes), 1)
+
+        error = errors[0]
+        self.assertEqual(error["line"], 8)
+        self.assertEqual(error["column"], 17)
+        self.assertEqual(
+            error["message"],
+            "too few arguments to function call, expected 2, have 1",
+        )
+        self.assertEqual(
+            error["explanation"],
+            "函数调用参数不足：需要2个，实际提供1个。请补齐参数。",
+        )
+
+        note = notes[0]
+        self.assertEqual(note["line"], 1)
+        self.assertEqual(note["column"], 5)
+        self.assertEqual(note["message"], "'add' declared here")
+        self.assertEqual(
+            note["explanation"],
+            "标识符add在此处声明，请核对其声明。",
+        )

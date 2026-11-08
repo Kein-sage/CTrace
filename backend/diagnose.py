@@ -32,6 +32,24 @@ def explain_diagnostic(message):
         identifier = match.group(1)
         return f"尚未声明标识符：{identifier}。请先声明再使用，并检查名称拼写。"
 
+    match = re.fullmatch(
+        r"too few arguments to function call, expected (\d+), have (\d+)",
+        message,
+    )
+
+    if match:
+        expected, actual = match.groups()
+        return (
+            f"函数调用参数不足：需要{expected}个，实际提供{actual}个。"
+            "请补齐参数。"
+        )
+
+    match = re.fullmatch(r"'([^']+)' declared here", message)
+
+    if match:
+        identifier = match.group(1)
+        return f"标识符{identifier}在此处声明，请核对其声明。"
+
     return None
 
 if len(sys.argv) != 2:
