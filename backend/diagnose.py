@@ -11,9 +11,15 @@ EXPLANATIONS = {
         "缺少右花括号 }，请检查代码块是否完整闭合。",
     "to match this '{'":
         "此处的左花括号需要与右花括号配对。",
+    "missing terminating '\"' character":
+        "字符串缺少结束的双引号，请检查英文双引号是否成对。",
+    "expected expression":
+        "此处需要一个有效表达式，请检查附近代码，并优先处理前面的诊断。",
 }
 
 def explain_diagnostic(message):
+    message = re.sub(r" \[-W[^\]]+\]$", "", message)
+
     if message in EXPLANATIONS:
         return EXPLANATIONS[message]
 

@@ -105,3 +105,38 @@ class DiagnoseTests(unittest.TestCase):
             note["explanation"],
             "此处的左花括号需要与右花括号配对。",
         )
+
+    def test_unterminated_string(self):
+        result = check_example("unterminated_string.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+
+        warnings = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "warning"
+        ]
+        errors = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "error"
+        ]
+
+        self.assertEqual(len(warnings), 1)
+        self.assertEqual(len(errors), 1)
+
+        warning = warnings[0]
+        self.assertEqual(warning["line"], 3)
+        self.assertEqual(warning["column"], 27)
+        self.assertIn("missing terminating", warning["message"])
+        self.assertEqual(
+            warning["explanation"],
+            "字符串缺少结束的双引号，请检查英文双引号是否成对。",
+        )
+
+        error = errors[0]
+        self.assertEqual(error["message"], "expected expression")
+        self.assertEqual(
+            error["explanation"],
+            "此处需要一个有效表达式，请检查附近代码，并优先处理前面的诊断。",
+        )
