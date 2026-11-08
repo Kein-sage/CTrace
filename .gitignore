@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local secrets
+.env
+.env.*
+!.env.example
+
+# Frontend
+node_modules/
+dist/
+build/
+coverage/
+
+# C compilation
+*.o
+*.a
+*.so
+*.out
+*.exe
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# Editor and operating system
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
