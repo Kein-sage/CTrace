@@ -187,7 +187,9 @@ python3 -m unittest discover -s backend -p 'test_*.py' -v
 
 ## 许可证
 
-许可证尚未选定。
+本项目采用 [MIT 许可证](LICENSE)。
+
+Copyright (c) 2026 Kein-sage
 
 ## 仓库
 
