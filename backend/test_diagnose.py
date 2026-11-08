@@ -68,3 +68,40 @@ class DiagnoseTests(unittest.TestCase):
             diagnostic["explanation"],
             "尚未声明标识符：score。请先声明再使用，并检查名称拼写。",
         )
+
+    def test_missing_brace(self):
+        result = check_example("missing_brace.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+
+        errors = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "error"
+        ]
+        notes = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "note"
+        ]
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(len(notes), 1)
+
+        error = errors[0]
+        self.assertEqual(error["line"], 3)
+        self.assertEqual(error["column"], 14)
+        self.assertEqual(error["message"], "expected '}'")
+        self.assertEqual(
+            error["explanation"],
+            "缺少右花括号 }，请检查代码块是否完整闭合。",
+        )
+
+        note = notes[0]
+        self.assertEqual(note["line"], 2)
+        self.assertEqual(note["column"], 1)
+        self.assertEqual(note["message"], "to match this '{'")
+        self.assertEqual(
+            note["explanation"],
+            "此处的左花括号需要与右花括号配对。",
+        )

@@ -7,6 +7,10 @@ from pathlib import Path
 EXPLANATIONS = {
     "expected ';' after return statement":
         "return 语句末尾缺少分号，请在 return 表达式后添加英文分号 ;。",
+    "expected '}'":
+        "缺少右花括号 }，请检查代码块是否完整闭合。",
+    "to match this '{'":
+        "此处的左花括号需要与右花括号配对。",
 }
 
 def explain_diagnostic(message):
