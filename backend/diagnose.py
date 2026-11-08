@@ -1,3 +1,4 @@
+import re
 import json
 import subprocess
 import sys
@@ -28,9 +29,30 @@ except subprocess.TimeoutExpired:
     print("检查超时：超过了 5 秒。")
     sys.exit(2)
 
+diagnostics = []
+
+pattern = re.compile(
+    r"^(.*):(\d+):(\d+): (fatal error|error|warning|note): (.*)$"
+)
+
+for output_line in result.stderr.splitlines():
+    match = pattern.match(output_line)
+
+    if match:
+        file_path, line, column, severity, message = match.groups()
+
+        diagnostics.append({
+            "file": file_path,
+            "line": int(line),
+            "column": int(column),
+            "severity": severity,
+            "message": message,
+        })
+
 report = {
     "file": str(source),
     "success": result.returncode == 0,
+    "diagnostics": diagnostics,
     "compiler_output": result.stderr,
 }
 
