@@ -43,3 +43,7 @@ class DiagnoseTests(unittest.TestCase):
         self.assertEqual(diagnostic["column"], 26)
         self.assertEqual(diagnostic["severity"], "error")
         self.assertIn("expected ';'", diagnostic["message"])
+        self.assertEqual(
+            diagnostic["explanation"],
+            "return 语句末尾缺少分号，请在 return 表达式后添加英文分号 ;。",
+        )

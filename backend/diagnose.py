@@ -4,6 +4,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+EXPLANATIONS = {
+    "expected ';' after return statement":
+        "return 语句末尾缺少分号，请在 return 表达式后添加英文分号 ;。",
+}
 
 if len(sys.argv) != 2:
     print("用法：python3 backend/diagnose.py <C文件路径>")
@@ -47,6 +51,7 @@ for output_line in result.stderr.splitlines():
             "column": int(column),
             "severity": severity,
             "message": message,
+            "explanation": EXPLANATIONS.get(message),
         })
 
 report = {
