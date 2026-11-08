@@ -47,3 +47,24 @@ class DiagnoseTests(unittest.TestCase):
             diagnostic["explanation"],
             "return 语句末尾缺少分号，请在 return 表达式后添加英文分号 ;。",
         )
+
+    def test_undeclared_variable(self):
+        result = check_example("undeclared_variable.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+        self.assertEqual(len(report["diagnostics"]), 1)
+
+        diagnostic = report["diagnostics"][0]
+        self.assertEqual(diagnostic["line"], 3)
+        self.assertEqual(diagnostic["column"], 12)
+        self.assertEqual(diagnostic["severity"], "error")
+        self.assertEqual(
+            diagnostic["message"],
+            "use of undeclared identifier 'score'",
+        )
+        self.assertEqual(
+            diagnostic["explanation"],
+            "尚未声明标识符：score。请先声明再使用，并检查名称拼写。",
+        )

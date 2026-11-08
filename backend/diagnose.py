@@ -9,6 +9,21 @@ EXPLANATIONS = {
         "return 语句末尾缺少分号，请在 return 表达式后添加英文分号 ;。",
 }
 
+def explain_diagnostic(message):
+    if message in EXPLANATIONS:
+        return EXPLANATIONS[message]
+
+    match = re.fullmatch(
+        r"use of undeclared identifier '([^']+)'",
+        message,
+    )
+
+    if match:
+        identifier = match.group(1)
+        return f"尚未声明标识符：{identifier}。请先声明再使用，并检查名称拼写。"
+
+    return None
+
 if len(sys.argv) != 2:
     print("用法：python3 backend/diagnose.py <C文件路径>")
     sys.exit(2)
@@ -51,7 +66,7 @@ for output_line in result.stderr.splitlines():
             "column": int(column),
             "severity": severity,
             "message": message,
-            "explanation": EXPLANATIONS.get(message),
+            "explanation": explain_diagnostic(message),
         })
 
 report = {
