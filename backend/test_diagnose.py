@@ -1,3 +1,4 @@
+import tempfile
 import json
 import subprocess
 import sys
@@ -27,6 +28,7 @@ class DiagnoseTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
 
         report = json.loads(result.stdout)
+        self.assertIsNone(report["error"])
         self.assertTrue(report["success"])
         self.assertEqual(report["diagnostics"], [])
 
@@ -35,6 +37,7 @@ class DiagnoseTests(unittest.TestCase):
         self.assertEqual(result.returncode, 1)
 
         report = json.loads(result.stdout)
+        self.assertIsNone(report["error"])
         self.assertFalse(report["success"])
         self.assertEqual(len(report["diagnostics"]), 1)
 
@@ -180,3 +183,45 @@ class DiagnoseTests(unittest.TestCase):
             note["explanation"],
             "标识符add在此处声明，请核对其声明。",
         )
+
+    def test_missing_arguments(self):
+        result = subprocess.run(
+            [sys.executable, str(ROOT / "backend" / "diagnose.py")],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stderr, "")
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+        self.assertIsNone(report["file"])
+        self.assertEqual(report["diagnostics"], [])
+        self.assertEqual(report["compiler_output"], "")
+        self.assertEqual(report["error"]["code"], "INVALID_ARGUMENTS")
+
+    def test_missing_file(self):
+        with tempfile.TemporaryDirectory() as directory:
+            missing_file = Path(directory) / "missing.c"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "backend" / "diagnose.py"),
+                    str(missing_file),
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+
+            self.assertEqual(result.returncode, 2)
+            self.assertEqual(result.stderr, "")
+
+            report = json.loads(result.stdout)
+            self.assertFalse(report["success"])
+            self.assertEqual(report["file"], str(missing_file.resolve()))
+            self.assertEqual(report["diagnostics"], [])
+            self.assertEqual(report["error"]["code"], "FILE_NOT_FOUND")

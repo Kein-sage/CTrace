@@ -52,15 +52,35 @@ def explain_diagnostic(message):
 
     return None
 
-if len(sys.argv) != 2:
-    print("用法：python3 backend/diagnose.py <C文件路径>")
+def exit_with_error(code, message, file_path=None):
+    report = {
+        "file": file_path,
+        "success": False,
+        "diagnostics": [],
+        "compiler_output": "",
+        "error": {
+            "code": code,
+            "message": message,
+        },
+    }
+
+    print(json.dumps(report, ensure_ascii=False, indent=2))
     sys.exit(2)
+
+if len(sys.argv) != 2:
+    exit_with_error(
+        "INVALID_ARGUMENTS",
+        "用法：python3 backend/diagnose.py <C文件路径>",
+    )
 
 source = Path(sys.argv[1]).resolve()
 
 if not source.is_file():
-    print(f"找不到文件：{source}")
-    sys.exit(2)
+    exit_with_error(
+        "FILE_NOT_FOUND",
+        "输入文件不存在或不是普通文件。",
+        str(source),
+    )
 
 try:
     result = subprocess.run(
@@ -70,11 +90,23 @@ try:
         timeout=5,
     )
 except FileNotFoundError:
-    print("找不到 clang，请检查是否已安装。")
-    sys.exit(2)
+    exit_with_error(
+        "COMPILER_NOT_FOUND",
+        "找不到 clang，请检查是否已安装。",
+        str(source),
+    )
 except subprocess.TimeoutExpired:
-    print("检查超时：超过了 5 秒。")
-    sys.exit(2)
+    exit_with_error(
+        "COMPILER_TIMEOUT",
+        "检查超时：超过了5秒。",
+        str(source),
+    )
+except OSError:
+    exit_with_error(
+        "COMPILER_START_FAILED",
+        "无法启动 clang，请检查程序路径和执行权限。",
+        str(source),
+    )
 
 diagnostics = []
 
@@ -102,6 +134,7 @@ report = {
     "success": result.returncode == 0,
     "diagnostics": diagnostics,
     "compiler_output": result.stderr,
+    "error": None,
 }
 
 print(json.dumps(report, ensure_ascii=False, indent=2))
