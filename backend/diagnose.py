@@ -38,6 +38,20 @@ def explain_diagnostic(message):
         )
 
     match = re.fullmatch(
+        r"call to undeclared function '([^']+)'; ISO C99 and later "
+        r"do not support implicit function declarations",
+        message,
+    )
+
+    if match:
+        function_name = match.group(1)
+        return (
+            f"调用了尚未声明的函数：{function_name}。"
+            "请在调用前声明或定义函数，并检查函数名拼写；"
+            "若使用库函数，请包含对应头文件。"
+        )
+
+    match = re.fullmatch(
         r"use of undeclared identifier '([^']+)'",
         message,
     )
