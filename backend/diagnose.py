@@ -70,6 +70,16 @@ def explain_diagnostic(message):
             "请删除多余参数，并核对函数声明。"
         )
 
+    match = re.fullmatch(r"'([^']+)' file not found", message)
+
+    if match:
+        header_name = match.group(1)
+        return (
+            f"找不到头文件：{header_name}。"
+            "请检查头文件名称和包含路径；"
+            "若来自第三方库，请确认已安装相应开发文件。"
+        )
+
 
     match = re.fullmatch(r"'([^']+)' declared here", message)
 
