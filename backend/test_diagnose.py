@@ -306,3 +306,35 @@ class CompilerFailureTests(unittest.TestCase):
             PermissionError("模拟没有执行权限"),
             "COMPILER_START_FAILED",
         )
+
+
+
+class SemicolonTests(unittest.TestCase):
+    def test_missing_semicolon_variants(self):
+        cases = {
+            "missing_declaration_semicolon.c":
+                "expected ';' at end of declaration",
+            "missing_expression_semicolon.c":
+                "expected ';' after expression",
+        }
+
+        for filename, expected_message in cases.items():
+            with self.subTest(filename=filename):
+                result = check_example(filename)
+                self.assertEqual(result.returncode, 1)
+
+                report = json.loads(result.stdout)
+                self.assertIsNone(report["error"])
+
+                errors = [
+                    item for item in report["diagnostics"]
+                    if item["severity"] == "error"
+                ]
+
+                self.assertEqual(len(errors), 1)
+                self.assertEqual(
+                    errors[0]["message"],
+                    expected_message,
+                )
+                self.assertIsNotNone(errors[0]["explanation"])
+                self.assertIn("分号", errors[0]["explanation"])

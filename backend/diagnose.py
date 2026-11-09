@@ -28,6 +28,15 @@ def explain_diagnostic(message):
     if message in EXPLANATIONS:
         return EXPLANATIONS[message]
 
+    if message in {
+        "expected ';' at end of declaration",
+        "expected ';' after expression",
+    }:
+        return (
+            "这条语句缺少英文分号 ;。"
+            "请检查报错位置及上一条语句的结尾。"
+        )
+
     match = re.fullmatch(
         r"use of undeclared identifier '([^']+)'",
         message,
