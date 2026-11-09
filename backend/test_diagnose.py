@@ -393,3 +393,36 @@ class MissingHeaderTests(unittest.TestCase):
             "请检查头文件名称和包含路径；"
             "若来自第三方库，请确认已安装相应开发文件。",
         )
+
+
+class UndeclaredFunctionTests(unittest.TestCase):
+    def test_undeclared_function(self):
+        result = check_example("undeclared_function.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+        self.assertIsNone(report["error"])
+
+        errors = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "error"
+        ]
+
+        self.assertEqual(len(errors), 1)
+        diagnostic = errors[0]
+        self.assertEqual(diagnostic["line"], 3)
+        self.assertEqual(diagnostic["column"], 12)
+        self.assertEqual(
+            diagnostic["message"],
+            "call to undeclared function 'compute'; ISO C99 and later "
+            "do not support implicit function declarations "
+            "[-Wimplicit-function-declaration]",
+        )
+        self.assertEqual(
+            diagnostic["explanation"],
+            "调用了尚未声明的函数：compute。"
+            "请在调用前声明或定义函数，并检查函数名拼写；"
+            "若使用库函数，请包含对应头文件。",
+        )
+        self.assertIn(diagnostic["message"], report["compiler_output"])
