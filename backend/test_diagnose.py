@@ -338,3 +338,29 @@ class SemicolonTests(unittest.TestCase):
                 )
                 self.assertIsNotNone(errors[0]["explanation"])
                 self.assertIn("分号", errors[0]["explanation"])
+
+
+class ArgumentCountTests(unittest.TestCase):
+    def test_too_many_arguments(self):
+        result = check_example("too_many_arguments.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+        self.assertIsNone(report["error"])
+
+        errors = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "error"
+        ]
+
+        self.assertEqual(len(errors), 1)
+        self.assertEqual(
+            errors[0]["message"],
+            "too many arguments to function call, expected 2, have 3",
+        )
+        self.assertEqual(
+            errors[0]["explanation"],
+            "函数调用参数过多：需要2个，实际提供3个。"
+            "请删除多余参数，并核对函数声明。",
+        )

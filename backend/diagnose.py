@@ -58,6 +58,19 @@ def explain_diagnostic(message):
             "请补齐参数。"
         )
 
+    match = re.fullmatch(
+        r"too many arguments to function call, expected (\d+), have (\d+)",
+        message,
+    )
+
+    if match:
+        expected, actual = match.groups()
+        return (
+            f"函数调用参数过多：需要{expected}个，实际提供{actual}个。"
+            "请删除多余参数，并核对函数声明。"
+        )
+
+
     match = re.fullmatch(r"'([^']+)' declared here", message)
 
     if match:
