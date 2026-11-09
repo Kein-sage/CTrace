@@ -364,3 +364,32 @@ class ArgumentCountTests(unittest.TestCase):
             "函数调用参数过多：需要2个，实际提供3个。"
             "请删除多余参数，并核对函数声明。",
         )
+
+
+class MissingHeaderTests(unittest.TestCase):
+    def test_missing_header(self):
+        result = check_example("missing_header.c")
+        self.assertEqual(result.returncode, 1)
+
+        report = json.loads(result.stdout)
+        self.assertFalse(report["success"])
+        self.assertIsNone(report["error"])
+
+        fatal_errors = [
+            item for item in report["diagnostics"]
+            if item["severity"] == "fatal error"
+        ]
+
+        self.assertEqual(len(fatal_errors), 1)
+        diagnostic = fatal_errors[0]
+
+        self.assertEqual(
+            diagnostic["message"],
+            "'no_such_header_xyz.h' file not found",
+        )
+        self.assertEqual(
+            diagnostic["explanation"],
+            "找不到头文件：no_such_header_xyz.h。"
+            "请检查头文件名称和包含路径；"
+            "若来自第三方库，请确认已安装相应开发文件。",
+        )
