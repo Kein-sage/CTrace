@@ -213,6 +213,8 @@ python3 backend/runtime_preflight.py
 
 范围、环境核查结果及后续准入条件见 [环境核查与隔离方案](docs/runtime-v0.2-environment.md)。
 
+资源控制已提供 [固定可信探针](docs/runtime-resource-probes.md)，可在明确允许临时 systemd/cgroup 运行状态变更时手动验收。默认只输出计划；探针通过不代表已具备 C 程序隔离执行能力。
+
 ## 当前限制与安全边界
 
 - 当前提供本地命令行原型，尚无 Web API、网页界面或执行过程可视化。
