@@ -181,7 +181,7 @@ echo $?
 python3 -m unittest discover -s backend -p 'test_*.py' -v
 ~~~
 
-当前代码共 50 个测试方法（真实编译测试需要 Clang），包含声明和表达式缺少分号的两个子用例，以及参数过多、头文件缺失和调用未声明函数测试。已发布的 v0.1.0 包含 21 个测试。当前代码的测试覆盖：
+测试包含诊断回归和运行时环境清单核查（真实编译测试需要 Clang），其中包含声明和表达式缺少分号的两个子用例，以及参数过多、头文件缺失和调用未声明函数测试。已发布的 v0.1.0 包含 21 个测试。当前代码的测试覆盖：
 
 - 正确代码与五类故意出错的样例。
 - 缺少命令参数、输入文件不存在。
@@ -197,6 +197,21 @@ python3 -m unittest discover -s backend -p 'test_*.py' -v
 样例测试使用真实 Clang。三个编译器异常测试使用 unittest.mock 模拟；输出收集测试会启动短小的 Python 子进程，并用较小的测试阈值验证边界及终止行为。增加测试后，总数量可能变化；以实际测试结果为准。
 
 仓库已配置 GitHub Actions：推送到 main 或向 main 提交拉取请求时，会在 Ubuntu 24.04、Python 3.12、Clang 18 环境运行测试。每次上传后，可在仓库的 Actions 页面查看结果。
+
+## v0.2 运行时环境核查
+
+运行时检测后端尚未实现，可先查看只读环境清单：
+
+~~~bash
+python3 backend/runtime_preflight.py
+~~~
+
+命令不接受源码、不启动外部程序、不安装组件或修改系统配置，输出 JSON。
+它会定位当前进程的 cgroup v2 挂载，读取控制器、当前限额并观察管理权限。
+当前始终返回 ready=false、退出码 2；工具存在、权限看似可写或当前限额有值，均不代表任务隔离和资源预算已验收。
+当前 cgroup 不满足候选管理前提时，会附加 LIMITS_UNAVAILABLE，详细原因和读取失败保留在 observations.current_cgroup。
+
+范围、环境核查结果及后续准入条件见 [环境核查与隔离方案](docs/runtime-v0.2-environment.md)。
 
 ## 当前限制与安全边界
 
