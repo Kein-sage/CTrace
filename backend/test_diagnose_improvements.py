@@ -69,6 +69,38 @@ class ExplanationTests(unittest.TestCase):
                 self.assertIsNone(diagnose.explain_diagnostic(message))
 
 
+    def test_format_type_mismatch_explanation(self):
+        cases = (
+            ("int", "char *"),
+            ("char *", "int"),
+            ("double", "int"),
+            ("int", "int *"),
+        )
+        for expected, actual in cases:
+            with self.subTest(expected=expected, actual=actual):
+                message = (
+                    f"format specifies type '{expected}' "
+                    f"but the argument has type '{actual}' [-Wformat]"
+                )
+                explanation = diagnose.explain_diagnostic(message)
+                self.assertIsNotNone(explanation)
+                self.assertEqual(
+                    explanation,
+                    f"格式说明符要求的参数类型是 {expected}，"
+                    f"实际提供的是 {actual}。"
+                    "请核对格式说明符与对应参数，使类型一致。",
+                )
+
+    def test_unrecognized_format_message_remains_unexplained(self):
+        messages = (
+            "format specifies type 'int'",
+            "format specifies type 'int' but the argument has type 'Count' (aka 'long')",
+            "data argument not used by format string [-Wformat-extra-args]",
+        )
+        for message in messages:
+            with self.subTest(message=message):
+                self.assertIsNone(diagnose.explain_diagnostic(message))
+
 class DiagnosticParsingTests(unittest.TestCase):
     def test_driver_diagnostics_have_no_source_location(self):
         for prefix in ("clang: ", "clang-18: ", "clang.exe: ", ""):

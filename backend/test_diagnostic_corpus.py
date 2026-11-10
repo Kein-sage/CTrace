@@ -66,7 +66,7 @@ class DiagnosticCorpusTests(unittest.TestCase):
         self.assertEqual((notes[0]["line"], notes[0]["column"]), (6, 24))
         self.assertIn("圆括号", notes[0]["explanation"])
 
-    def test_unexplained_format_warning_is_preserved_without_failing_check(self):
+    def test_format_warning_is_explained_without_failing_check(self):
         code, report = self.check_source(ROOT / "examples" / "format_mismatch.c")
         self.assertEqual(code, 0)
         self.assertTrue(report["success"])
@@ -81,8 +81,48 @@ class DiagnosticCorpusTests(unittest.TestCase):
             and "format specifies type" in item["message"]
         ]
         self.assertEqual(len(warnings), 1)
-        self.assertIsNone(warnings[0]["explanation"])
+        self.assertIsNotNone(warnings[0]["explanation"])
+        self.assertIn("int", warnings[0]["explanation"])
+        self.assertIn("char *", warnings[0]["explanation"])
         self.assertIn(warnings[0]["message"], report["compiler_output"])
+
+    def test_format_type_variants_and_correct_controls(self):
+        cases = (
+            ("%s", "42", "char *", "int"),
+            ("%f", "42", "double", "int"),
+            ("%d", "&count", "int", "int *"),
+            ("%s", '"hello"', None, None),
+            ("%f", "3.5", None, None),
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "format.c"
+            for specifier, argument, expected, actual in cases:
+                with self.subTest(specifier=specifier, argument=argument):
+                    source.write_text(
+                        '#include <stdio.h>\n'
+                        'int main(void) { int count = 42; printf("'
+                        + specifier + '", ' + argument + '); return 0; }\n',
+                        encoding="utf-8",
+                    )
+                    code, report = self.check_source(source)
+                    self.assertEqual(code, 0)
+                    self.assertTrue(report["success"])
+                    self.assertFalse(report["diagnostics_truncated"])
+                    if expected is None:
+                        self.assertEqual(report["diagnostics"], [])
+                        continue
+                    warnings = [
+                        item for item in report["diagnostics"]
+                        if item["severity"] == "warning"
+                        and "format specifies type" in item["message"]
+                    ]
+                    self.assertEqual(len(warnings), 1)
+                    diagnostic = warnings[0]
+                    self.assertIsNotNone(diagnostic["explanation"])
+                    self.assertIn(expected, diagnostic["explanation"])
+                    self.assertIn(actual, diagnostic["explanation"])
+                    self.assertIn("[-Wformat]", diagnostic["message"])
+                    self.assertIn(diagnostic["message"], report["compiler_output"])
 
     def test_real_error_limit_reports_incomplete_diagnostics(self):
         with tempfile.TemporaryDirectory() as directory:
