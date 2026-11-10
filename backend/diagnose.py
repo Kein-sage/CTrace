@@ -18,6 +18,10 @@ EXPLANATIONS = {
         "此处的左花括号需要与右花括号配对。",
     "missing terminating '\"' character":
         "字符串缺少结束的双引号，请检查英文双引号是否成对。",
+    "expected ')'":
+        "缺少右圆括号 )，请检查函数调用或表达式中的圆括号是否成对。",
+    "to match this '('":
+        "此处的左圆括号需要与右圆括号配对。",
     "expected expression":
         "此处需要一个有效表达式，请检查附近代码，并优先处理前面的诊断。",
 }
@@ -38,12 +42,18 @@ def explain_diagnostic(message):
         )
 
     match = re.fullmatch(
-        r"use of undeclared identifier '([^']+)'",
+        r"use of undeclared identifier '([^']+)'"
+        r"(?:; did you mean '([^']+)'\?)?",
         message,
     )
 
     if match:
-        identifier = match.group(1)
+        identifier, suggestion = match.groups()
+        if suggestion:
+            return (
+                f"尚未声明标识符：{identifier}。"
+                f"你是否想使用 {suggestion}？请核对名称拼写及其声明。"
+            )
         return f"尚未声明标识符：{identifier}。请先声明再使用，并检查名称拼写。"
 
     match = re.fullmatch(
@@ -108,6 +118,7 @@ def exit_with_error(code, message, file_path=None):
         "file": file_path,
         "success": False,
         "diagnostics": [],
+        "diagnostics_truncated": False,
         "compiler_output": "",
         "error": {
             "code": code,
@@ -118,96 +129,125 @@ def exit_with_error(code, message, file_path=None):
     print(json.dumps(report, ensure_ascii=False, indent=2))
     sys.exit(2)
 
-if len(sys.argv) != 2:
-    exit_with_error(
-        "INVALID_ARGUMENTS",
-        "用法：python3 backend/diagnose.py <C文件路径>",
+def parse_diagnostics(output):
+    diagnostics = []
+    located = re.compile(
+        r"^(.*):(\d+):(\d+): (fatal error|error|warning|note): (.*)$"
+    )
+    unlocated = re.compile(
+        r"^(?:clang(?:-\d+)?(?:\.exe)?: )?"
+        r"(fatal error|error|warning|note): (.*)$"
     )
 
-source = Path(sys.argv[1]).resolve()
-
-if not source.is_file():
-    exit_with_error(
-        "FILE_NOT_FOUND",
-        "输入文件不存在或不是普通文件。",
-        str(source),
-    )
-
-try:
-    source_size = source.stat().st_size
-except OSError:
-    exit_with_error(
-        "FILE_ACCESS_FAILED",
-        "无法读取输入文件信息，请检查路径和权限。",
-        str(source),
-    )
-
-if source_size > MAX_SOURCE_BYTES:
-    exit_with_error(
-        "SOURCE_TOO_LARGE",
-        f"输入文件过大，最大允许{MAX_SOURCE_BYTES}字节。",
-        str(source),
-    )
-
-try:
-    result = run_compiler(
-        ["clang", "-fsyntax-only", "-fno-color-diagnostics", str(source)],
-        timeout=5,
-        max_output_bytes=MAX_COMPILER_OUTPUT_BYTES,
-    )
-except CompilerOutputLimitExceeded:
-    exit_with_error(
-        "COMPILER_OUTPUT_TOO_LARGE",
-        f"编译器输出过大，最大允许{MAX_COMPILER_OUTPUT_BYTES}字节。",
-        str(source),
-    )
-except FileNotFoundError:
-    exit_with_error(
-        "COMPILER_NOT_FOUND",
-        "找不到 clang，请检查是否已安装。",
-        str(source),
-    )
-except subprocess.TimeoutExpired:
-    exit_with_error(
-        "COMPILER_TIMEOUT",
-        "检查超时：超过了5秒。",
-        str(source),
-    )
-except OSError:
-    exit_with_error(
-        "COMPILER_START_FAILED",
-        "编译器运行异常，请检查程序路径、执行权限和系统资源。",
-        str(source),
-    )
-
-diagnostics = []
-
-pattern = re.compile(
-    r"^(.*):(\d+):(\d+): (fatal error|error|warning|note): (.*)$"
-)
-
-for output_line in result.stderr.splitlines():
-    match = pattern.match(output_line)
-
-    if match:
-        file_path, line, column, severity, message = match.groups()
+    for output_line in output.splitlines():
+        match = located.match(output_line)
+        if match:
+            file_path, line, column, severity, message = match.groups()
+            line, column = int(line), int(column)
+        else:
+            match = unlocated.match(output_line)
+            if not match:
+                continue
+            severity, message = match.groups()
+            file_path = line = column = None
 
         diagnostics.append({
             "file": file_path,
-            "line": int(line),
-            "column": int(column),
+            "line": line,
+            "column": column,
             "severity": severity,
             "message": message,
             "explanation": explain_diagnostic(message),
         })
 
-report = {
-    "file": str(source),
-    "success": result.returncode == 0,
-    "diagnostics": diagnostics,
-    "compiler_output": result.stderr,
-    "error": None,
-}
+    return diagnostics
 
-print(json.dumps(report, ensure_ascii=False, indent=2))
-sys.exit(0 if report["success"] else 1)
+
+def main(argv=None):
+    args = sys.argv[1:] if argv is None else argv
+
+    if len(args) != 1:
+        exit_with_error(
+            "INVALID_ARGUMENTS",
+            "用法：python3 backend/diagnose.py <C文件路径>",
+        )
+
+    source = Path(args[0])
+    try:
+        source = source.resolve()
+        if not source.is_file():
+            exit_with_error(
+                "FILE_NOT_FOUND",
+                "输入文件不存在或不是普通文件。",
+                str(source),
+            )
+        source_size = source.stat().st_size
+    except (OSError, RuntimeError):
+        exit_with_error(
+            "FILE_ACCESS_FAILED",
+            "无法访问输入文件，请检查路径、权限及符号链接。",
+            str(source),
+        )
+
+    if source_size > MAX_SOURCE_BYTES:
+        exit_with_error(
+            "SOURCE_TOO_LARGE",
+            f"输入文件过大，最大允许{MAX_SOURCE_BYTES}字节。",
+            str(source),
+        )
+
+    try:
+        result = run_compiler(
+            [
+                "clang", "-x", "c", "-fsyntax-only",
+                "-fno-color-diagnostics", str(source),
+            ],
+            timeout=5,
+            max_output_bytes=MAX_COMPILER_OUTPUT_BYTES,
+        )
+    except CompilerOutputLimitExceeded:
+        exit_with_error(
+            "COMPILER_OUTPUT_TOO_LARGE",
+            f"编译器输出过大，最大允许{MAX_COMPILER_OUTPUT_BYTES}字节。",
+            str(source),
+        )
+    except FileNotFoundError:
+        exit_with_error(
+            "COMPILER_NOT_FOUND",
+            "找不到 clang，请检查是否已安装。",
+            str(source),
+        )
+    except subprocess.TimeoutExpired:
+        exit_with_error(
+            "COMPILER_TIMEOUT",
+            "检查超时：超过了5秒。",
+            str(source),
+        )
+    except OSError:
+        exit_with_error(
+            "COMPILER_START_FAILED",
+            "编译器运行异常，请检查程序路径、执行权限和系统资源。",
+            str(source),
+        )
+
+    diagnostics = parse_diagnostics(result.stderr)
+
+    report = {
+        "file": str(source),
+        "success": result.returncode == 0,
+        "diagnostics": diagnostics,
+        "diagnostics_truncated": any(
+            item["severity"] == "fatal error"
+            and item["message"].startswith("too many errors emitted, stopping now")
+            for item in diagnostics
+        ),
+        "compiler_output": result.stderr,
+        "error": None,
+    }
+
+    print(json.dumps(report, ensure_ascii=False, indent=2))
+    return 0 if report["success"] else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
