@@ -42,6 +42,19 @@ def explain_diagnostic(message):
         )
 
     match = re.fullmatch(
+        r"format specifies type '([^']+)' but the argument has type '([^']+)'",
+        message,
+    )
+
+    if match:
+        expected, actual = match.groups()
+        return (
+            f"格式说明符要求的参数类型是 {expected}，"
+            f"实际提供的是 {actual}。"
+            "请核对格式说明符与对应参数，使类型一致。"
+        )
+
+    match = re.fullmatch(
         r"use of undeclared identifier '([^']+)'"
         r"(?:; did you mean '([^']+)'\?)?",
         message,
