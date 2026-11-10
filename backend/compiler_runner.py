@@ -12,16 +12,25 @@ class CompilerOutputLimitExceeded(Exception):
     pass
 
 
-def run_compiler(command, *, timeout=5, max_output_bytes=1024 * 1024):
+def run_compiler(command, *, timeout=5, max_output_bytes=1024 * 1024,
+                 stdin=None, env=None, cwd=None, on_output=None):
     if timeout <= 0 or max_output_bytes < 0:
         raise ValueError("Invalid compiler limits")
 
     deadline = time.monotonic() + timeout
+    options = {}
+    if stdin is not None:
+        options["stdin"] = stdin
+    if env is not None:
+        options["env"] = env
+    if cwd is not None:
+        options["cwd"] = cwd
     process = subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         start_new_session=(os.name == "posix"),
+        **options,
     )
     events = queue.Queue(maxsize=2)
     stop = threading.Event()
@@ -88,6 +97,8 @@ def run_compiler(command, *, timeout=5, max_output_bytes=1024 * 1024):
                         f"Compiler output exceeded {max_output_bytes} bytes"
                     )
                 buffers[name].extend(chunk)
+                if on_output is not None:
+                    on_output(name, chunk)
 
         process.wait(timeout=max(0, deadline - time.monotonic()))
         completed = True
