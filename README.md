@@ -215,6 +215,8 @@ python3 backend/runtime_preflight.py
 
 资源控制已提供 [固定可信探针](docs/runtime-resource-probes.md)，可在明确允许临时 systemd/cgroup 运行状态变更时手动验收。默认只输出计划；探针通过不代表已具备 C 程序隔离执行能力。
 
+[固定隔离策略](docs/runtime-isolation.md) 已在本机通过文件、网络、环境/FD、工作区配额和组合资源清理验收。它仅接受固定可信探针，不开放 C 源码执行；项目内锁定组件的准备方式和适用环境见该文档。
+
 ## 当前限制与安全边界
 
 - 当前提供本地命令行原型，尚无 Web API、网页界面或执行过程可视化。

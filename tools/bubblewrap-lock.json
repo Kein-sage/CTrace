@@ -1,0 +1,11 @@
+{
+  "package": "bubblewrap",
+  "version": "0.9.0-1ubuntu0.3",
+  "architecture": "amd64",
+  "url": "https://archive.ubuntu.com/ubuntu/pool/main/b/bubblewrap/bubblewrap_0.9.0-1ubuntu0.3_amd64.deb",
+  "package_size": 50436,
+  "package_sha256": "2461f1beee9cb04c8942739fe1a2b37e7b7c2a3d518f0779dc75f9245baa3094",
+  "binary_sha256": "e318903862396f96de3df57264e0158682b952fd3fb53ac23d876413e7b30f71",
+  "license": "LGPL-2.0-or-later",
+  "metadata_source": "Local Ubuntu apt package metadata, 2026-11-10; package copyright retained on extraction"
+}
