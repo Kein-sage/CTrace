@@ -40,6 +40,12 @@ Clang 官方文档说明了该检查选项和停止恢复选项；工具存在�
 分类必须同时考虑检测报告、进程返回值和资源管理器结果。只把已经验证的报告形式转成中文诊断，未知信息保留原文。
 不能将任意标准错误中的相似字符串宣称为不可伪造的检测证据。
 
+### 离线报告解析
+
+`backend/runtime_ubsan.py` 已提供候选诊断解析器。它只识别两条连续且完整的文本行：位于固定 `/work/source.c` 的错误行，以及同位置的 `integer-divide-by-zero` 类型摘要。匹配后将显示文件名映射回用户请求的文件，保留原始两行和 UBSan 报告的行列号。重复、未知或位置不一致的报告不生成解释，未来调用方仍应保留完整 stderr。
+
+此格式基于 [LLVM 18.1.8 的诊断输出](https://github.com/llvm/llvm-project/blob/llvmorg-18.1.8/compiler-rt/lib/ubsan/ubsan_diag.cpp) 与 [类型定义](https://github.com/llvm/llvm-project/blob/llvmorg-18.1.8/compiler-rt/lib/ubsan/ubsan_checks.inc)。后续固定验收需验证 `report_error_type=1`、启用摘要、禁用颜色与堆栈时的实际输出。行列号是工具报告的位置（例如受 C 的 `#line` 指令影响），不应当作编辑器坐标。stderr 可由程序写入，解析结果仅为候选，不能替代进程、资源和清理证据。当前只有文本测试，未开放 C 运行入口。
+
 ## 4. 必须先完成的隔离条件
 
 隔离同时覆盖编译和运行，不能在沙箱外先调用编译器处理待检查源码。
